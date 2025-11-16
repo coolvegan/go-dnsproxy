@@ -39,10 +39,25 @@ func main() {
 
 	// Initialisiere Blacklist
 	blacklist := dns.NewBlacklist()
-	blacklist.AddDomain("*.doubleclick.net")
-	blacklist.AddDomain("*.googlesyndication.com")
-	blacklist.AddDomain("*.googleadservices.com")
-	blacklist.AddDomain("*.google-analytics.com")
+
+	// Lade externe Hosts-Datei (Steven Black)
+	// Für Demo nutzen wir die kleinste Variante
+	fmt.Println("📥 Lade externe Blacklist von GitHub...")
+	hostsURL := "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+	added, err := blacklist.LoadFromURL(hostsURL)
+	if err != nil {
+		log.Printf("⚠️  Warnung: Konnte externe Blacklist nicht laden: %v", err)
+		log.Println("   Fahre mit manuellen Regeln fort...")
+		// Fallback zu manuellen Regeln
+		blacklist.AddDomain("*.doubleclick.net")
+		blacklist.AddDomain("*.googlesyndication.com")
+		blacklist.AddDomain("*.googleadservices.com")
+		blacklist.AddDomain("*.google-analytics.com")
+	} else {
+		fmt.Printf("✅ %d Domains von externer Blacklist geladen\n\n", added)
+	}
+
+	// Füge zusätzliche manuelle Regeln hinzu
 	blacklist.AddDomain("ads.example.com")
 	blacklist.AddDomain("tracker.example.com")
 

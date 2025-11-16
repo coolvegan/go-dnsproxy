@@ -194,7 +194,7 @@ func TestCache_UpdateEntry(t *testing.T) {
 	defer cache.Stop()
 
 	domain := "example.com"
-	
+
 	// Erste IPs
 	ips1 := []string{"1.1.1.1"}
 	cache.Set(domain, ips1)
@@ -267,7 +267,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 
 func TestCache_Stop(t *testing.T) {
 	cache := NewCache(2*time.Hour, 100*time.Millisecond)
-	
+
 	// Stop sollte die Cleanup-Goroutine beenden
 	cache.Stop()
 

@@ -337,7 +337,7 @@ func TestProxy_Lookup_CacheHit(t *testing.T) {
 	// Kein Server nötig, wenn Cache-Hit
 	domain := "cached.example.com"
 	expectedIPs := []string{"1.2.3.4", "5.6.7.8"}
-	
+
 	// Setze direkt in Cache
 	cache.Set(domain, expectedIPs)
 

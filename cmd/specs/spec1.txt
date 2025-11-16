@@ -1,0 +1,11 @@
+GO-DNSPROXY erzeugt einen DNS Dienst, der eine Liste von DNS Server nutzt um von diesen Server IP Adressen abzufragen.
+Es gibt aber eine Blacklist von Servern. Diese können zum Beispiel Spam, Werbetracker oder Cybersecurity Threads sein.
+
+Es braucht ein Interface um eine Struktur eines Servers zu bekommen. Bezeichner, IP Adresse V4, V6. In der main.go findet
+sich schon ein Konstrukt für einen DNS Proxy. Dieser ist rudimentär. 
+
+Wir gehen in diesem Prozess Kleinschrittig vor. Wir beachten die Prinzipien DRY, SOLID und YAGNI. Nach jeder Implementierung
+schreiben wir Testcases um die Edgecases abzudecken. Anschließend erzeugen wir ein git add und ein git commit. Jeder Schritt
+der in der Implementierung unklar ist wird über Nachfrage an mich geregelt.
+
+Zusammenfassung: Wir gehen in kleinen atomaren Schritten vor. Plan, Rücksprache, Implementierung, Test,  Erfolg, Git add, Git Commit und Wiederholung.

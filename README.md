@@ -8,6 +8,7 @@ Ein leistungsstarker DNS-Proxy-Server mit integrierter Blacklist und Cache-Funkt
 - 🔄 **Round-Robin** - Lastverteilung über mehrere DNS-Server
 - 💾 **Memory Cache** - 2 Stunden TTL, automatische Reinigung alle 5 Minuten
 - 🛡️ **Blacklist** - Blockiert Werbe- und Tracking-Domains
+- 📥 **Externe Blacklists** - Lädt hosts-Dateien von URLs (z.B. Steven Black)
 - 🌐 **IPv4 & IPv6** - Unterstützung für A und AAAA Records
 - ⚡ **Thread-Safe** - Sichere nebenläufige Operationen
 - 📊 **Statistiken** - Cache-Hits, Server-Status
@@ -139,12 +140,42 @@ registry.AddServer(opendns)
 
 ### Blacklist erweitern
 
+#### Manuelle Domains
+
 ```go
 // Einzelne Domain blockieren
 blacklist.AddDomain("spam.example.com")
 
 // Wildcard (alle Subdomains)
 blacklist.AddDomain("*.tracking.com")
+```
+
+#### Externe Hosts-Dateien laden
+
+```go
+// Steven Black's hosts file (über 110.000 Domains)
+added, err := blacklist.LoadFromURL("https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts")
+if err != nil {
+    log.Printf("Fehler beim Laden: %v", err)
+} else {
+    log.Printf("%d Domains geladen", added)
+}
+
+// Weitere Listen:
+// - Nur Adware/Malware: .../hosts/master/alternates/gambling-porn/hosts
+// - Mit Social Media: .../hosts/master/alternates/fakenews-gambling-porn-social/hosts
+```
+
+#### Hosts-Datei aus String laden
+
+```go
+hostsContent := `# My custom hosts
+0.0.0.0 ads.example.com
+0.0.0.0 tracker.example.net
+127.0.0.1 spam.example.org
+`
+
+added, err := blacklist.LoadFromHostsContent(hostsContent)
 ```
 
 ### Cache-Einstellungen

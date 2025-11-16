@@ -10,21 +10,21 @@ import (
 
 // Proxy ist der DNS-Proxy-Service, der Registry, Blacklist und Cache nutzt
 type Proxy struct {
-	registry     *Registry
-	blacklist    *Blacklist
-	cache        *Cache
-	timeout      time.Duration
-	serverIndex  uint32 // Für Round-Robin
+	registry      *Registry
+	blacklist     *Blacklist
+	cache         *Cache
+	timeout       time.Duration
+	serverIndex   uint32 // Für Round-Robin
 	useRoundRobin bool
 }
 
 // NewProxy erstellt einen neuen DNS-Proxy ohne Cache
 func NewProxy(registry *Registry, blacklist *Blacklist) *Proxy {
 	return &Proxy{
-		registry:     registry,
-		blacklist:    blacklist,
-		cache:        nil,
-		timeout:      5 * time.Second,
+		registry:      registry,
+		blacklist:     blacklist,
+		cache:         nil,
+		timeout:       5 * time.Second,
 		useRoundRobin: false,
 	}
 }
@@ -32,10 +32,10 @@ func NewProxy(registry *Registry, blacklist *Blacklist) *Proxy {
 // NewProxyWithCache erstellt einen neuen DNS-Proxy mit Cache
 func NewProxyWithCache(registry *Registry, blacklist *Blacklist, cache *Cache) *Proxy {
 	return &Proxy{
-		registry:     registry,
-		blacklist:    blacklist,
-		cache:        cache,
-		timeout:      5 * time.Second,
+		registry:      registry,
+		blacklist:     blacklist,
+		cache:         cache,
+		timeout:       5 * time.Second,
 		useRoundRobin: true, // Mit Cache nutzen wir Round-Robin
 	}
 }
@@ -102,7 +102,7 @@ func (p *Proxy) lookupRoundRobin(domain string, servers []DNSServer) ([]string, 
 
 	// Hole nächsten Server-Index (atomic für Thread-Safety)
 	index := atomic.AddUint32(&p.serverIndex, 1) % uint32(len(servers))
-	
+
 	// Versuche alle Server, beginnend mit dem gewählten
 	var lastErr error
 	for i := 0; i < len(servers); i++ {

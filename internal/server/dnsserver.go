@@ -32,8 +32,8 @@ func NewDNSServer(addr string, proxy *dnsinternal.Proxy) (*DNSServer, error) {
 
 	// Erstelle DNS-Server mit UDP
 	s.server = &dns.Server{
-		Addr: addr,
-		Net:  "udp",
+		Addr:    addr,
+		Net:     "udp",
 		Handler: dns.HandlerFunc(s.handleDNSRequest),
 	}
 

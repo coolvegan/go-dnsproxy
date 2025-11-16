@@ -1,0 +1,8 @@
+Jetzt implementieren wir einen echten DNS Server. 
+Dieser Server nutzt unsere DNS Server im Round Robin Verfahren
+Und fragt IP Adressen app und gibt diese weiter. Gleichzeitig erzeugen
+wir einen Memory Cache für bereits abgefragte Adressen. Ist die Adresse bereits
+im Memory-Cache vorhanden, dann nehmen wir den Eintrag. Dieser Cache wird alle
+fünf Minuten gereinigt und Einträge die über eine bestimmte Zeitspanne gehen,
+beispielsweise 2 Stunden, werden gelöscht. Werden Adressen von der Blocklist abgefragt,
+dann geben wir 0.0.0.0 oder 127.0.0.1 oder das passende Aquivalent für ipv6 zurück.

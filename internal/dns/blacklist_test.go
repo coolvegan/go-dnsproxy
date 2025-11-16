@@ -351,3 +351,176 @@ func TestBlacklist_DuplicateAddition(t *testing.T) {
 		t.Errorf("Count() after duplicate wildcard adds = %d, want 2", bl.Count())
 	}
 }
+
+func TestParseHostsLine(t *testing.T) {
+	tests := []struct {
+		name string
+		line string
+		want string
+	}{
+		{
+			name: "Valid hosts line",
+			line: "0.0.0.0 ad-assets.futurecdn.net",
+			want: "ad-assets.futurecdn.net",
+		},
+		{
+			name: "Valid with 127.0.0.1",
+			line: "127.0.0.1 ads.example.com",
+			want: "ads.example.com",
+		},
+		{
+			name: "Valid with tabs",
+			line: "0.0.0.0\ttracker.example.com",
+			want: "tracker.example.com",
+		},
+		{
+			name: "Valid with multiple spaces",
+			line: "0.0.0.0    ads.domain.com",
+			want: "ads.domain.com",
+		},
+		{
+			name: "Comment line",
+			line: "# This is a comment",
+			want: "",
+		},
+		{
+			name: "Empty line",
+			line: "",
+			want: "",
+		},
+		{
+			name: "Line with only whitespace",
+			line: "   ",
+			want: "",
+		},
+		{
+			name: "Line with only IP",
+			line: "0.0.0.0",
+			want: "",
+		},
+		{
+			name: "Invalid domain (no dot)",
+			line: "0.0.0.0 localhost",
+			want: "",
+		},
+		{
+			name: "Line with inline comment",
+			line: "0.0.0.0 ads.com # comment",
+			want: "ads.com",
+		},
+		{
+			name: "IPv6 format",
+			line: "::1 tracker.example.com",
+			want: "tracker.example.com",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseHostsLine(tt.line)
+			if got != tt.want {
+				t.Errorf("parseHostsLine(%q) = %q, want %q", tt.line, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBlacklist_LoadFromHostsContent(t *testing.T) {
+	bl := NewBlacklist()
+
+	content := `# Title: Test Hosts File
+# Comment line
+
+0.0.0.0 ad-assets.futurecdn.net
+0.0.0.0 ck.getcookiestxt.com
+127.0.0.1 tracker.example.com
+
+# Another comment
+0.0.0.0 wizhumpgyros.com
+0.0.0.0 coccyxwickimp.com
+
+# Invalid lines below
+0.0.0.0
+invalid line
+0.0.0.0 localhost
+
+# Valid again
+0.0.0.0 webmail-who-int.000webhostapp.com
+`
+
+	added, err := bl.LoadFromHostsContent(content)
+	if err != nil {
+		t.Errorf("LoadFromHostsContent() unexpected error: %v", err)
+	}
+
+	// Sollte 6 valide Domains hinzugefügt haben
+	if added != 6 {
+		t.Errorf("LoadFromHostsContent() added %d domains, want 6", added)
+	}
+
+	// Prüfe ob Domains korrekt hinzugefügt wurden
+	testDomains := []string{
+		"ad-assets.futurecdn.net",
+		"ck.getcookiestxt.com",
+		"tracker.example.com",
+		"wizhumpgyros.com",
+		"webmail-who-int.000webhostapp.com",
+	}
+
+	for _, domain := range testDomains {
+		if !bl.IsBlocked(domain) {
+			t.Errorf("Domain %s should be blocked", domain)
+		}
+	}
+
+	// localhost sollte nicht blockiert sein (kein Punkt)
+	if bl.IsBlocked("localhost") {
+		t.Error("localhost should not be blocked")
+	}
+}
+
+func TestBlacklist_LoadFromHostsContent_Empty(t *testing.T) {
+	bl := NewBlacklist()
+
+	content := `# Only comments
+# No valid entries
+`
+
+	added, err := bl.LoadFromHostsContent(content)
+	if err != nil {
+		t.Errorf("LoadFromHostsContent() unexpected error: %v", err)
+	}
+
+	if added != 0 {
+		t.Errorf("LoadFromHostsContent() added %d domains, want 0", added)
+	}
+
+	if bl.Count() != 0 {
+		t.Errorf("Blacklist should be empty, got %d entries", bl.Count())
+	}
+}
+
+func TestBlacklist_LoadFromHostsContent_Duplicates(t *testing.T) {
+	bl := NewBlacklist()
+
+	content := `0.0.0.0 duplicate.com
+0.0.0.0 duplicate.com
+0.0.0.0 duplicate.com
+0.0.0.0 unique.com
+`
+
+	added, err := bl.LoadFromHostsContent(content)
+	if err != nil {
+		t.Errorf("LoadFromHostsContent() unexpected error: %v", err)
+	}
+
+	// Sollte nur 2 Domains haben (Duplikate werden nicht doppelt gezählt)
+	if bl.Count() != 2 {
+		t.Errorf("Blacklist Count() = %d, want 2", bl.Count())
+	}
+
+	// Aber added sollte trotzdem 4 sein (alle Versuche)
+	if added != 4 {
+		t.Errorf("LoadFromHostsContent() added %d, want 4", added)
+	}
+}
