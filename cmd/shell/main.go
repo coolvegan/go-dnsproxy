@@ -3,15 +3,22 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"gittea.kittel.dev/go-dnsproxy/internal/dns"
+	"gittea.kittel.dev/go-dnsproxy/internal/server"
 )
 
 func main() {
+	fmt.Println("=== GO-DNSPROXY - DNS Server with Blacklist & Cache ===")
+	fmt.Println()
+
 	// Initialisiere Registry und füge DNS-Server hinzu
 	registry := dns.NewRegistry()
 
-	// Füge bekannte öffentliche DNS-Server hinzu
 	cloudflare, err := dns.NewServer("Cloudflare", "1.1.1.1", "2606:4700:4700::1111", 53)
 	if err != nil {
 		log.Fatalf("Fehler beim Erstellen des Cloudflare-Servers: %v", err)
@@ -30,68 +37,74 @@ func main() {
 	}
 	registry.AddServer(quad9)
 
-	// Initialisiere Blacklist und füge blockierte Domains hinzu
+	// Initialisiere Blacklist
 	blacklist := dns.NewBlacklist()
-
-	// Beispiel: Blockiere bekannte Werbe- und Tracking-Domains
 	blacklist.AddDomain("*.doubleclick.net")
 	blacklist.AddDomain("*.googlesyndication.com")
 	blacklist.AddDomain("*.googleadservices.com")
+	blacklist.AddDomain("*.google-analytics.com")
 	blacklist.AddDomain("ads.example.com")
+	blacklist.AddDomain("tracker.example.com")
 
-	// Erstelle DNS-Proxy
-	proxy := dns.NewProxy(registry, blacklist)
+	// Initialisiere Cache (2 Stunden TTL, 5 Minuten Cleanup)
+	cache := dns.NewCache(2*time.Hour, 5*time.Minute)
+	defer cache.Stop()
 
-	fmt.Println("=== GO-DNSPROXY Demo ===")
-	fmt.Printf("Konfigurierte DNS-Server: %d\n", registry.Count())
-	fmt.Printf("Blockierte Domains/Regeln: %d\n\n", blacklist.Count())
+	// Erstelle Proxy mit Cache und Round-Robin
+	proxy := dns.NewProxyWithCache(registry, blacklist, cache)
 
-	// Test-Domains für Abfragen
-	testDomains := []string{
-		"heise.de",
-		"example.com",
-		"google.com",
-		"ads.example.com",         // Sollte blockiert sein
-		"tracker.doubleclick.net", // Sollte blockiert sein (Wildcard)
-	}
-
-	// Führe DNS-Abfragen durch
-	for _, domain := range testDomains {
-		fmt.Printf("Lookup: %s\n", domain)
-		ips, err := proxy.Lookup(domain)
-		if err != nil {
-			fmt.Printf("  ❌ Fehler: %v\n\n", err)
-			continue
-		}
-
-		fmt.Printf("  ✅ IP-Adressen:\n")
-		for _, ip := range ips {
-			fmt.Printf("     - %s\n", ip)
-		}
-		fmt.Println()
-	}
-
-	// Statistik
-	fmt.Println("=== Statistik ===")
-	fmt.Printf("Aktive DNS-Server: %d\n", registry.Count())
+	// Konfiguration ausgeben
+	fmt.Printf("📋 Konfiguration:\n")
+	fmt.Printf("   DNS-Server (Round-Robin): %d\n", registry.Count())
 	servers := registry.GetAllServers()
-	for _, server := range servers {
-		fmt.Printf("  - %s (%s)\n", server.GetName(), server.GetAddress())
+	for _, s := range servers {
+		fmt.Printf("     • %s (%s)\n", s.GetName(), s.GetAddress())
+	}
+	fmt.Printf("   Blacklist-Regeln: %d\n", blacklist.Count())
+	fmt.Printf("   Cache TTL: 2 Stunden\n")
+	fmt.Printf("   Cache Cleanup: alle 5 Minuten\n\n")
+
+	// Starte DNS-Server auf Port 15353 (nicht-privilegiert für Demo)
+	// Für produktiven Betrieb auf Port 53 mit sudo starten
+	dnsAddr := ":15353"
+	dnsServer, err := server.NewDNSServer(dnsAddr, proxy)
+	if err != nil {
+		log.Fatalf("Fehler beim Erstellen des DNS-Servers: %v", err)
 	}
 
-	fmt.Printf("\nBlockierte Domain-Regeln: %d\n", blacklist.Count())
-	wildcards := blacklist.GetAllWildcards()
-	if len(wildcards) > 0 {
-		fmt.Println("  Wildcard-Regeln:")
-		for _, wc := range wildcards {
-			fmt.Printf("    - %s\n", wc)
-		}
+	fmt.Printf("🚀 Starte DNS-Server auf %s...\n", dnsAddr)
+	err = dnsServer.Start()
+	if err != nil {
+		log.Fatalf("Fehler beim Starten des DNS-Servers: %v", err)
 	}
-	domains := blacklist.GetAllDomains()
-	if len(domains) > 0 {
-		fmt.Println("  Exakte Domains:")
-		for _, d := range domains {
-			fmt.Printf("    - %s\n", d)
-		}
+
+	fmt.Println("✅ DNS-Server läuft!")
+	fmt.Println("\n📖 Nutzung:")
+	fmt.Println("   dig @127.0.0.1 -p 15353 example.com")
+	fmt.Println("   nslookup example.com 127.0.0.1 -port=15353")
+	fmt.Println("\n🧪 Test blockierte Domain:")
+	fmt.Println("   dig @127.0.0.1 -p 15353 ads.example.com")
+	fmt.Println("\n⏹  Beenden mit Ctrl+C")
+	fmt.Println()
+
+	// Warte auf Signal zum Beenden
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	<-sigChan
+	fmt.Println("\n\n🛑 Beende DNS-Server...")
+
+	// Statistik vor dem Beenden
+	fmt.Printf("\n📊 Statistik:\n")
+	fmt.Printf("   Cache-Einträge: %d\n", cache.Count())
+	fmt.Printf("   Aktive DNS-Server: %d\n", registry.Count())
+	fmt.Printf("   Blockierte Regeln: %d\n", blacklist.Count())
+
+	// Server stoppen
+	err = dnsServer.Stop()
+	if err != nil {
+		log.Printf("Fehler beim Stoppen: %v", err)
 	}
+
+	fmt.Println("✅ DNS-Server beendet.")
 }
