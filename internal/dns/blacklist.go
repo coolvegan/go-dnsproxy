@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -230,4 +231,14 @@ func (b *Blacklist) LoadFromURL(url string) (int, error) {
 
 	// Content verarbeiten
 	return b.LoadFromHostsContent(string(body))
+}
+
+func (b *Blacklist) LoadFromFile(filepath string) (int, error) {
+	// Datei öffnen
+	bytes, err := os.ReadFile(filepath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read file: %w", err)
+	}
+	// Content verarbeiten
+	return b.LoadFromHostsContent(string(bytes))
 }

@@ -43,8 +43,8 @@ func main() {
 	// Lade externe Hosts-Datei (Steven Black)
 	// Für Demo nutzen wir die kleinste Variante
 	fmt.Println("📥 Lade externe Blacklist von GitHub...")
-	hostsURL := "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
-	added, err := blacklist.LoadFromURL(hostsURL)
+	//hostsURL := "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+	added, err := blacklist.LoadFromFile("hosts")
 	if err != nil {
 		log.Printf("⚠️  Warnung: Konnte externe Blacklist nicht laden: %v", err)
 		log.Println("   Fahre mit manuellen Regeln fort...")
